@@ -231,6 +231,15 @@ tests/Feature/Api/
 
 ---
 
-## Prompt Log
+## Walkthrough Video & Prompt Log
 
-See the `/prompts` folder for screenshots of the AI-assisted prompts used during development.
+### 1. Narrated Walkthrough Video
+The narrated video walkthrough demonstrating database schema, live API calls, concurrency handling with rollback verification, and the Livewire billing UI is available in the repository:
+- **File**: [`prompts/Vijay Prasath - Mallow-store -2026-10-30.mp4`](./prompts/Vijay%20Prasath%20-%20Mallow-store%20-2026-10-30.mp4) (~35 MB)
+
+### 2. Prompt Log
+See the [`/prompts`](./prompts) directory for:
+- Master architectural plan ([`mallow_plan.md`](./prompts/mallow_plan.md))
+- Prompt screenshots ([`plan_prompt.png`](./prompts/plan_prompt.png), [`code_prompt.png`](./prompts/code_prompt.png))
+- Comprehensive AI prompt log and workflow notes ([`prompts/README.md`](./prompts/README.md))
+

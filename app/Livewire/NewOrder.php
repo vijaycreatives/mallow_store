@@ -6,21 +6,34 @@ use App\Exceptions\InsufficientStockException;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Services\OrderService;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
+/**
+ * @property-read Collection<int, Product> $products
+ * @property-read Collection<int, Product> $lowStockProducts
+ * @property-read string $subtotal
+ * @property-read string $taxTotal
+ * @property-read string $grandTotal
+ * @property-read string $balance
+ */
 class NewOrder extends Component
 {
     public string $email = '';
-    public string $name  = '';
 
-    /** @var array<int, array{product_id: string, quantity: string}> */
+    public string $name = '';
+
+    /** @var array<int, array{product_id: string|int, quantity: int|string}> */
     public array $items = [
         ['product_id' => '', 'quantity' => 1],
     ];
 
     public string $amountGiven = '';
+
     public ?array $createdOrder = null;
+
     public ?string $errorMessage = null;
 
     public function updatedEmail(): void
@@ -44,15 +57,16 @@ class NewOrder extends Component
     }
 
     #[Computed]
-    public function products(): \Illuminate\Database\Eloquent\Collection
+    public function products(): Collection
     {
         return Product::where('stock_quantity', '>', 0)->orderBy('name')->get();
     }
 
     #[Computed]
-    public function lowStockProducts(): \Illuminate\Database\Eloquent\Collection
+    public function lowStockProducts(): Collection
     {
         $threshold = config('store.low_stock_threshold', 10);
+
         return Product::where('stock_quantity', '<=', $threshold)->orderBy('stock_quantity')->get();
     }
 
@@ -66,10 +80,11 @@ class NewOrder extends Component
             }
             $product = $this->products->firstWhere('id', (int) $item['product_id']);
             if ($product) {
-                $qty   = max(1, (int) $item['quantity']);
+                $qty = max(1, (int) $item['quantity']);
                 $total = bcadd($total, bcmul((string) $product->price, (string) $qty, 2), 2);
             }
         }
+
         return $total;
     }
 
@@ -83,12 +98,13 @@ class NewOrder extends Component
             }
             $product = $this->products->firstWhere('id', (int) $item['product_id']);
             if ($product) {
-                $qty      = max(1, (int) $item['quantity']);
-                $rowSub   = bcmul((string) $product->price, (string) $qty, 2);
-                $rowTax   = bcmul($rowSub, bcdiv((string) $product->tax_percentage, '100', 6), 2);
-                $total    = bcadd($total, $rowTax, 2);
+                $qty = max(1, (int) $item['quantity']);
+                $rowSub = bcmul((string) $product->price, (string) $qty, 2);
+                $rowTax = bcmul($rowSub, bcdiv((string) $product->tax_percentage, '100', 6), 2);
+                $total = bcadd($total, $rowTax, 2);
             }
         }
+
         return $total;
     }
 
@@ -104,17 +120,18 @@ class NewOrder extends Component
         if ($this->amountGiven === '' || (float) $this->amountGiven <= 0) {
             return '0.00';
         }
+
         return bcsub((string) $this->amountGiven, $this->grandTotal, 2);
     }
 
     public function generateBill(OrderService $orderService): void
     {
         $this->validate([
-            'email'                => ['required', 'email'],
-            'name'                 => ['required', 'string'],
-            'items'                => ['required', 'array', 'min:1'],
-            'items.*.product_id'   => ['required'],
-            'items.*.quantity'     => ['required', 'integer', 'min:1'],
+            'email' => ['required', 'email'],
+            'name' => ['required', 'string'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
         $this->errorMessage = null;
@@ -123,21 +140,21 @@ class NewOrder extends Component
         try {
             $order = $orderService->createOrder([
                 'email' => $this->email,
-                'name'  => $this->name,
+                'name' => $this->name,
                 'items' => array_map(fn ($i) => [
                     'product_id' => (int) $i['product_id'],
-                    'quantity'   => (int) $i['quantity'],
+                    'quantity' => (int) $i['quantity'],
                 ], $this->items),
             ]);
 
             $this->createdOrder = [
-                'id'          => $order->id,
+                'id' => $order->id,
                 'grand_total' => $order->grand_total,
-                'customer'    => $order->customer->name,
+                'customer' => $order->customer->name,
             ];
 
             // Reset form
-            $this->items       = [['product_id' => '', 'quantity' => 1]];
+            $this->items = [['product_id' => '', 'quantity' => 1]];
             $this->amountGiven = '';
             unset($this->products, $this->lowStockProducts, $this->subtotal, $this->taxTotal, $this->grandTotal, $this->balance);
         } catch (InsufficientStockException $e) {
@@ -145,7 +162,7 @@ class NewOrder extends Component
         }
     }
 
-    public function render(): \Illuminate\View\View
+    public function render(): View
     {
         return view('livewire.new-order')
             ->layout('layouts.billing', ['title' => 'Store Billing — New Order']);
